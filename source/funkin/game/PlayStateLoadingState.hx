@@ -92,7 +92,6 @@ class PlayStateLoadingState extends MusicBeatState {
 
 		Logs.infos('PlayStateLoadingState finished in ${Std.int(lastLoadDurationMs)}ms for ${PlayState.SONG != null ? PlayState.SONG.meta.name : "unknown"}', "PlayState");
 
-		Paths.preserveTempFramesForNextStateSwitch();
 		if (__skipTransition) {
 			MusicBeatState.skipTransIn = true;
 			MusicBeatState.skipTransOut = true;
@@ -395,12 +394,10 @@ class PlayStateLoadingState extends MusicBeatState {
 	}
 
 	function preloadNoteType(noteType:String, keyCount:Int) {
-		var noteSprite = Note.preloadNoteType(noteType, keyCount);
-		preloadFramesKey(noteSprite);
+		preloadFramesKey('game/notes/$noteType');
 	}
 
 	function preloadNoteSprite(noteSprite:String, keyCount:Int) {
-		Note.preloadNoteSprite(noteSprite, keyCount);
 		preloadFramesKey(noteSprite);
 	}
 
