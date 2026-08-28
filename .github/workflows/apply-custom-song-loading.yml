@@ -1,0 +1,62 @@
+name: Apply custom song loading integration
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch PlayState
+        shell: python
+        run: |
+          from pathlib import Path
+
+          playstate = Path('source/funkin/game/PlayState.hx')
+          text = playstate.read_text(encoding='utf-8')
+
+          old = '''\tpublic static var coopMode:Bool = Flags.DEFAULT_COOP_MODE;\n\n\t/**\n\t * Script Pack of all the scripts being ran.\n\t */'''
+          new = '''\tpublic static var coopMode:Bool = Flags.DEFAULT_COOP_MODE;\n\n\t/**\n\t * When true, the next PlayState creation is routed through the loading state.\n\t * This also catches custom mod freeplay menus that call new PlayState() directly.\n\t */\n\tpublic static var pendingLoadingState:Bool = false;\n\n\t/**\n\t * Script Pack of all the scripts being ran.\n\t */'''
+          if old not in text:
+              raise SystemExit('PlayState static insertion point not found')
+          text = text.replace(old, new, 1)
+
+          old = '''\t@:dox(hide) override public function create()\n\t{\n\t\tNote.__customNoteTypeExists = [];'''
+          new = '''\t@:dox(hide) override public function create()\n\t{\n\t\tif (pendingLoadingState) {\n\t\t\tpendingLoadingState = false;\n\t\t\tFlxG.switchState(new PlayStateLoadingState());\n\t\t\treturn;\n\t\t}\n\n\t\tNote.__customNoteTypeExists = [];'''
+          if old not in text:
+              raise SystemExit('PlayState create insertion point not found')
+          text = text.replace(old, new, 1)
+
+          old = '''\t\tSONG = Chart.parse(_name, _difficulty, _variation);\n\t\tfromMods = SONG.fromMods;'''
+          new = '''\t\tSONG = Chart.parse(_name, _difficulty, _variation);\n\t\tfromMods = SONG.fromMods;\n\t\tpendingLoadingState = true;'''
+          if old not in text:
+              raise SystemExit('PlayState __loadSong insertion point not found')
+          text = text.replace(old, new, 1)
+
+          playstate.write_text(text, encoding='utf-8')
+
+          loader = Path('source/funkin/game/PlayStateLoadingState.hx')
+          text = loader.read_text(encoding='utf-8')
+          old = '''\t\tLogs.infos('PlayStateLoadingState finished in ${Std.int(lastLoadDurationMs)}ms for ${PlayState.SONG != null ? PlayState.SONG.meta.name : "unknown"}', "PlayState");\n\n\t\tif (__skipTransition) {'''
+          new = '''\t\tLogs.infos('PlayStateLoadingState finished in ${Std.int(lastLoadDurationMs)}ms for ${PlayState.SONG != null ? PlayState.SONG.meta.name : "unknown"}', "PlayState");\n\n\t\t// The PlayState we're about to create is the real gameplay state, so do not route it back here.\n\t\tPlayState.pendingLoadingState = false;\n\n\t\tif (__skipTransition) {'''
+          if old not in text:
+              raise SystemExit('Loader finish insertion point not found')
+          text = text.replace(old, new, 1)
+          loader.write_text(text, encoding='utf-8')
+
+      - name: Commit changes and remove helper
+        run: |
+          rm .github/workflows/apply-custom-song-loading.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add source/funkin/game/PlayState.hx source/funkin/game/PlayStateLoadingState.hx .github/workflows/apply-custom-song-loading.yml
+          git commit -m 'Route custom mod song entry through loading state'
+          git push
