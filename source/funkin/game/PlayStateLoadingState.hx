@@ -94,6 +94,7 @@ class PlayStateLoadingState extends MusicBeatState {
 
 		// The PlayState we're about to create is the real gameplay state, so do not route it back here.
 		PlayState.pendingLoadingState = false;
+		PlayState.skipLoadingStateOnce = true;
 
 		if (__skipTransition) {
 			MusicBeatState.skipTransIn = true;

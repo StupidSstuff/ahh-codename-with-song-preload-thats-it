@@ -99,6 +99,12 @@ class PlayState extends MusicBeatState
 	public static var pendingLoadingState:Bool = false;
 
 	/**
+	 * Set by PlayStateLoadingState immediately before creating the real gameplay state.
+	 * This prevents the always-on loading hook below from recursively reopening the loader.
+	 */
+	public static var skipLoadingStateOnce:Bool = false;
+
+	/**
 	 * Script Pack of all the scripts being ran.
 	 */
 	public var scripts:ScriptPack;
@@ -686,11 +692,13 @@ class PlayState extends MusicBeatState
 
 	@:dox(hide) override public function create()
 	{
-		if (pendingLoadingState) {
-			pendingLoadingState = false;
+		if (!skipLoadingStateOnce) {
 			FlxG.switchState(new PlayStateLoadingState());
 			return;
 		}
+
+		skipLoadingStateOnce = false;
+		pendingLoadingState = false;
 
 		Note.__customNoteTypeExists = [];
 
