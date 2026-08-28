@@ -8,6 +8,7 @@ import funkin.backend.scripting.events.menu.MenuChangeEvent;
 import funkin.backend.scripting.events.menu.freeplay.*;
 import funkin.backend.system.Conductor;
 import funkin.game.HealthIcon;
+import funkin.game.PlayStateLoadingState;
 import funkin.savedata.FunkinSave;
 
 using StringTools;
@@ -347,7 +348,7 @@ class FreeplayState extends MusicBeatState
 		Options.freeplayLastVariation = curSong.variant;
 
 		PlayState.loadSong(event.song, event.difficulty, event.variant, event.opponentMode, event.coopMode);
-		FlxG.switchState(new PlayState());
+		FlxG.switchState(new PlayStateLoadingState());
 	}
 
 	public function convertChart() {
