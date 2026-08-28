@@ -93,6 +93,12 @@ class PlayState extends MusicBeatState
 	public static var coopMode:Bool = Flags.DEFAULT_COOP_MODE;
 
 	/**
+	 * When true, the next PlayState creation is routed through the loading state.
+	 * This also catches custom mod freeplay menus that call new PlayState() directly.
+	 */
+	public static var pendingLoadingState:Bool = false;
+
+	/**
 	 * Script Pack of all the scripts being ran.
 	 */
 	public var scripts:ScriptPack;
@@ -680,6 +686,12 @@ class PlayState extends MusicBeatState
 
 	@:dox(hide) override public function create()
 	{
+		if (pendingLoadingState) {
+			pendingLoadingState = false;
+			FlxG.switchState(new PlayStateLoadingState());
+			return;
+		}
+
 		Note.__customNoteTypeExists = [];
 
 		// SCRIPTING & DATA INITIALIZATION
@@ -2354,6 +2366,7 @@ class PlayState extends MusicBeatState
 
 		SONG = Chart.parse(_name, _difficulty, _variation);
 		fromMods = SONG.fromMods;
+		pendingLoadingState = true;
 	}
 }
 

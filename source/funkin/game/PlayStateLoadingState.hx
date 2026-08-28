@@ -92,6 +92,9 @@ class PlayStateLoadingState extends MusicBeatState {
 
 		Logs.infos('PlayStateLoadingState finished in ${Std.int(lastLoadDurationMs)}ms for ${PlayState.SONG != null ? PlayState.SONG.meta.name : "unknown"}', "PlayState");
 
+		// The PlayState we're about to create is the real gameplay state, so do not route it back here.
+		PlayState.pendingLoadingState = false;
+
 		if (__skipTransition) {
 			MusicBeatState.skipTransIn = true;
 			MusicBeatState.skipTransOut = true;
