@@ -1,0 +1,45 @@
+name: Apply Clean Loading Fix
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch source
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('source/funkin/game/PlayState.hx')
+          text = p.read_text(encoding='utf-8')
+          old = '''\t@:dox(hide) override public function create()\n\t{\n\t\tif (pendingLoadingState) {\n\t\t\tpendingLoadingState = false;\n\t\t\tFlxG.switchState(new PlayStateLoadingState());\n\t\t\treturn;\n\t\t}\n\n\t\tNote.__customNoteTypeExists = [];'''
+          new = '''\t@:dox(hide) override public function create()\n\t{\n\t\tNote.__customNoteTypeExists = [];'''
+          if old not in text:
+              raise SystemExit('PlayState create hook not found')
+          text = text.replace(old, new, 1)
+          p.write_text(text, encoding='utf-8')
+
+          p = Path('source/funkin/backend/MusicBeatState.hx')
+          text = p.read_text(encoding='utf-8')
+          old = '''\tpublic override function switchTo(nextState:FlxState) {\n\t\tvar e = event("onStateSwitch", EventManager.get(StateEvent).recycle(nextState));'''
+          new = '''\tpublic override function switchTo(nextState:FlxState) {\n\t\tif (nextState is funkin.game.PlayState && !funkin.game.PlayState.skipLoadingStateOnce) {\n\t\t\tnextState = new funkin.game.PlayStateLoadingState();\n\t\t}\n\n\t\tvar e = event("onStateSwitch", EventManager.get(StateEvent).recycle(nextState));'''
+          if old not in text:
+              raise SystemExit('MusicBeatState switchTo insertion point not found')
+          text = text.replace(old, new, 1)
+          p.write_text(text, encoding='utf-8')
+
+      - name: Commit clean fix and remove helper
+        run: |
+          rm .github/workflows/apply-clean-loading-fix.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add source/funkin/game/PlayState.hx source/funkin/backend/MusicBeatState.hx .github/workflows/apply-clean-loading-fix.yml
+          git commit -m 'Route PlayState through loading state before creation'
+          git push
