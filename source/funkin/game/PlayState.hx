@@ -692,7 +692,7 @@ class PlayState extends MusicBeatState
 
 	@:dox(hide) override public function create()
 	{
-		if (!skipLoadingStateOnce) {
+		if (pendingLoadingState && !skipLoadingStateOnce) {
 			FlxG.switchState(new PlayStateLoadingState());
 			return;
 		}
